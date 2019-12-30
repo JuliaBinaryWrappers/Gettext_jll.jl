@@ -2,9 +2,8 @@
 export libgettext
 
 using Libiconv_jll
+using XML2_jll
 ## Global variables
-const PATH_list = String[]
-const LIBPATH_list = String[]
 PATH = ""
 LIBPATH = ""
 LIBPATH_env = "PATH"
@@ -27,14 +26,18 @@ const libgettext = "libgettextlib-0-20-1.dll"
 Open all libraries
 """
 function __init__()
-    global prefix = abspath(joinpath(@__DIR__, ".."))
+    global artifact_dir = abspath(artifact"Gettext")
 
     # Initialize PATH and LIBPATH environment variable listings
     global PATH_list, LIBPATH_list
+    # We first need to add to LIBPATH_list the libraries provided by Julia
+    append!(LIBPATH_list, [Sys.BINDIR, joinpath(Sys.BINDIR, Base.LIBDIR, "julia"), joinpath(Sys.BINDIR, Base.LIBDIR)])
+    # From the list of our dependencies, generate a tuple of all the PATH and LIBPATH lists,
+    # then append them to our own.
+    foreach(p -> append!(PATH_list, p), (Libiconv_jll.PATH_list, XML2_jll.PATH_list,))
+    foreach(p -> append!(LIBPATH_list, p), (Libiconv_jll.LIBPATH_list, XML2_jll.LIBPATH_list,))
 
-    append!(PATH_list, Libiconv_jll.PATH_list)
-    append!(LIBPATH_list, Libiconv_jll.LIBPATH_list)
-    global libgettext_path = abspath(joinpath(artifact"Gettext", libgettext_splitpath...))
+    global libgettext_path = normpath(joinpath(artifact_dir, libgettext_splitpath...))
 
     # Manually `dlopen()` this right now so that future invocations
     # of `ccall` with its `SONAME` will find this path immediately.
